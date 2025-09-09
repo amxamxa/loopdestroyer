@@ -101,22 +101,41 @@ function buildInitialPrompts() {
 }
 
 const DEFAULT_PROMPTS = [
-  { color: '#9900ff', text: 'Screamo' },
-  { color: '#5200ff', text: 'digitalhardcore' },
-  { color: '#ff25f6', text: 'Drum and Bass' },
-  { color: '#2af6de', text: 'Post Punk' },
-  { color: '#ffdd28', text: 'Shoegaze' },
-  { color: '#2af6de', text: 'Funk' },
-  { color: '#9900ff', text: 'Chiptune' },
+  // Row 1: Melodic & Rhythmic
   { color: '#3dffab', text: 'Lush Strings' },
   { color: '#d8ff3e', text: 'Sparkling Arpeggios' },
   { color: '#d9b2ff', text: 'Staccato Rhythms' },
-  { color: '#3dffab', text: 'Punchy Kick' },
-  { color: '#ffdd28', text: 'Dubstep' },
-  { color: '#ff25f6', text: 'weird horror sounds' },
-  { color: '#d8ff3e', text: 'bass distortion' },
+  { color: '#3dffab', text: 'Ambient Pads' },
+
+  // Row 2: 8-bit & Electronic
+  { color: '#9900ff', text: 'Chiptune' },
+  { color: '#9900ff', text: '8-bit melodies' },
   { color: '#5200ff', text: 'Trip Hop' },
+  { color: '#ff25f6', text: 'Drum and Bass' },
+
+  // Row 3: Drums & Percussion
+  { color: '#3dffab', text: 'Punchy Kick' },
+  { color: '#ff9900', text: 'Clappy to Distorted Snare' },
+  { color: '#ff25f6', text: '70s Disco Beat' },
+  { color: '#2af6de', text: 'Funk' },
+  
+  // Row 4: Reggae, Dancehall & Dub
+  { color: '#d8ff3e', text: 'Clean Ska Guitar Upstrokes' },
+  { color: '#ffdd28', text: 'Dancehall Riddim' },
+  { color: '#ffdd28', text: 'Dubstep' },
+  { color: '#d8ff3e', text: 'bass distortion' },
+  
+  // Row 5: Rock & Punk
+  { color: '#2af6de', text: 'Post Punk' },
+  { color: '#ffdd28', text: 'Shoegaze' },
+  { color: '#e60000', text: 'Heavy Metal Riff' },
   { color: '#d9b2ff', text: 'Thrash' },
+
+  // Row 6: Heavy & Experimental
+  { color: '#5200ff', text: 'digitalhardcore' },
+  { color: '#9900ff', text: 'Screamo' },
+  { color: '#5200ff', text: 'Dark Underground Techno' },
+  { color: '#ff25f6', text: 'weird horror sounds' },
 ];
 
 main();

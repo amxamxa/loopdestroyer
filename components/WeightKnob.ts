@@ -109,15 +109,102 @@ export class WeightKnob extends LitElement {
     );
   }
 
-  override render() {
+  private renderDefs() {
+    return html`
+      <radialGradient id="knob-gradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+        <stop offset="0%" style="stop-color:#555; stop-opacity:1" />
+        <stop offset="60%" style="stop-color:#333; stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#111; stop-opacity:1" />
+      </radialGradient>
+      <linearGradient id="highlight-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style="stop-color:#888; stop-opacity:0.8" />
+        <stop offset="100%" style="stop-color:#fff; stop-opacity:0" />
+      </linearGradient>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+      <filter id="inner-shadow">
+        <feOffset dx="0" dy="1" />
+        <feGaussianBlur stdDeviation="1" result="offset-blur" />
+        <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse" />
+        <feFlood flood-color="black" flood-opacity="0.5" result="color" />
+        <feComposite operator="in" in="color" in2="inverse" result="shadow" />
+        <feComposite operator="over" in="shadow" in2="SourceGraphic" />
+      </filter>
+    `;
+  }
+
+  private renderKnobBase() {
+    return html`
+      <circle cx="50" cy="50" r="50" fill="#1a1a1a" />
+      <circle cx="50" cy="50" r="45" fill="url(#knob-gradient)" filter="url(#inner-shadow)" />
+      <path d="M 25 20 A 45 45 0 0 1 75 20" stroke="url(#highlight-gradient)" stroke-width="1.5" fill="none" opacity="0.5" />
+    `;
+  }
+
+  private renderTextureGrooved() {
+    const ribs = [];
+    for (let i = 0; i < 360; i += 15) {
+      ribs.push(html`<line 
+        x1="50" y1="50" 
+        x2="50" y2="10" 
+        stroke="#000" 
+        stroke-width="1"
+        stroke-opacity="0.7"
+        transform="rotate(${i}, 50, 50)"
+      />`);
+    }
+    return html`<g>${ribs}</g>`;
+  }
+
+  private renderTextureAkira() {
+    return html`
+      <g stroke=${this.color} stroke-width="0.5" fill="none" opacity="0.7">
+        <path d="M 30 30 L 50 20 L 70 30" />
+        <path d="M 20 50 L 35 45 L 35 55 L 20 50" />
+        <path d="M 80 50 L 65 45 L 65 55 L 80 50" />
+        <path d="M 30 70 L 50 80 L 70 70" />
+      </g>
+    `;
+  }
+
+  private renderIndicator() {
     const rotationRange = Math.PI * 2 * 0.75;
     const minRot = -rotationRange / 2 - Math.PI / 2;
     const maxRot = rotationRange / 2 - Math.PI / 2;
     const rot = minRot + (this.value / 2) * (maxRot - minRot);
     const dotStyle = styleMap({
-      transform: `translate(40px, 40px) rotate(${rot}rad)`,
+      transform: `translate(50px, 50px) rotate(${rot}rad)`,
     });
+    
+    const indicatorArc = this.value > 0.01 ? this.describeArc(50, 50, minRot, rot, 42) : '';
 
+    return html`
+      <path
+        d=${this.describeArc(50, 50, minRot, maxRot, 42)}
+        fill="none"
+        stroke="#000"
+        stroke-width="4"
+        stroke-opacity="0.5"
+        stroke-linecap="round" />
+      <path
+        d=${indicatorArc}
+        fill="none"
+        stroke=${this.color}
+        stroke-width="4"
+        stroke-linecap="round"
+        style="filter: url(#glow);" />
+      <g style=${dotStyle}>
+        <line x1="0" y1="-30" x2="0" y2="-40" stroke="#fff" stroke-width="2" />
+      </g>
+    `;
+  }
+  
+  override render() {
     let scale = (this.value / 2) * (MAX_HALO_SCALE - MIN_HALO_SCALE);
     scale += MIN_HALO_SCALE;
     scale += this.audioLevel * HALO_LEVEL_MODIFIER;
@@ -127,167 +214,31 @@ export class WeightKnob extends LitElement {
       background: this.color,
       transform: `scale(${scale})`,
     });
+    
+    // Smoothly transition between textures based on value
+    const groovedOpacity = Math.max(0, Math.min(1, (this.value - 0.5) / 0.5, (1.8 - this.value) / 0.4));
+    const akiraOpacity = Math.max(0, (this.value - 1.4) / 0.6);
 
     return html`
       <div id="halo" style=${haloStyle}></div>
-      <!-- Static SVG elements -->
-      ${this.renderStaticSvg()}
-      <!-- SVG elements that move, separated to limit redraws -->
       <svg
-        viewBox="0 0 80 80"
+        viewBox="0 0 100 100"
         @pointerdown=${this.handlePointerDown}
         @wheel=${this.handleWheel}>
-        <g style=${dotStyle}>
-          <circle cx="14" cy="0" r="2" fill="#000" />
+        <defs>
+            ${this.renderDefs()}
+        </defs>
+        ${this.renderKnobBase()}
+        <g style="transition: opacity 0.3s;" opacity=${groovedOpacity}>
+            ${this.renderTextureGrooved()}
         </g>
-        <path
-          d=${this.describeArc(40, 40, minRot, maxRot, 34.5)}
-          fill="none"
-          stroke="#0003"
-          stroke-width="3"
-          stroke-linecap="round" />
-        <path
-          d=${this.describeArc(40, 40, minRot, rot, 34.5)}
-          fill="none"
-          stroke="#fff"
-          stroke-width="3"
-          stroke-linecap="round" />
+        <g style="transition: opacity 0.3s;" opacity=${akiraOpacity}>
+            ${this.renderTextureAkira()}
+        </g>
+        ${this.renderIndicator()}
       </svg>
     `;
   }
-  
-  private renderStaticSvg() { 
-    return html`<svg viewBox="0 0 80 80">
-        <ellipse
-          opacity="0.4"
-          cx="40"
-          cy="40"
-          rx="40"
-          ry="40"
-          fill="url(#f1)" />
-        <g filter="url(#f2)">
-          <ellipse cx="40" cy="40" rx="29" ry="29" fill="url(#f3)" />
-        </g>
-        <g filter="url(#f4)">
-          <circle cx="40" cy="40" r="20.6667" fill="url(#f5)" />
-        </g>
-        <circle cx="40" cy="40" r="18" fill="url(#f6)" />
-        <defs>
-          <filter
-            id="f2"
-            x="8.33301"
-            y="10.0488"
-            width="63.333"
-            height="64"
-            filterUnits="userSpaceOnUse"
-            color-interpolation-filters="sRGB">
-            <feFlood flood-opacity="0" result="BackgroundImageFix" />
-            <feColorMatrix
-              in="SourceAlpha"
-              type="matrix"
-              values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
-              result="hardAlpha" />
-            <feOffset dy="2" />
-            <feGaussianBlur stdDeviation="1.5" />
-            <feComposite in2="hardAlpha" operator="out" />
-            <feColorMatrix
-              type="matrix"
-              values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0" />
-            <feBlend mode="normal" in2="BackgroundImageFix" result="shadow1" />
-            <feBlend
-              mode="normal"
-              in="SourceGraphic"
-              in2="shadow1"
-              result="shape" />
-          </filter>
-          <filter
-            id="f4"
-            x="11.333"
-            y="19.0488"
-            width="57.333"
-            height="59.334"
-            filterUnits="userSpaceOnUse"
-            color-interpolation-filters="sRGB">
-            <feFlood flood-opacity="0" result="BackgroundImageFix" />
-            <feColorMatrix
-              in="SourceAlpha"
-              type="matrix"
-              values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
-              result="hardAlpha" />
-            <feOffset dy="10" />
-            <feGaussianBlur stdDeviation="4" />
-            <feComposite in2="hardAlpha" operator="out" />
-            <feColorMatrix
-              type="matrix"
-              values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0" />
-            <feBlend mode="normal" in2="BackgroundImageFix" result="shadow1" />
-            <feColorMatrix
-              in="SourceAlpha"
-              type="matrix"
-              values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
-              result="hardAlpha" />
-            <feMorphology
-              radius="5"
-              operator="erode"
-              in="SourceAlpha"
-              result="shadow2" />
-            <feOffset dy="8" />
-            <feGaussianBlur stdDeviation="3" />
-            <feComposite in2="hardAlpha" operator="out" />
-            <feColorMatrix
-              type="matrix"
-              values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0" />
-            <feBlend mode="normal" in2="shadow1" result="shadow2" />
-            <feBlend
-              mode="normal"
-              in="SourceGraphic"
-              in2="shadow2"
-              result="shape" />
-          </filter>
-          <linearGradient
-            id="f1"
-            x1="40"
-            y1="0"
-            x2="40"
-            y2="80"
-            gradientUnits="userSpaceOnUse">
-            <stop stop-opacity="0.5" />
-            <stop offset="1" stop-color="white" stop-opacity="0.3" />
-          </linearGradient>
-          <radialGradient
-            id="f3"
-            cx="0"
-            cy="0"
-            r="1"
-            gradientUnits="userSpaceOnUse"
-            gradientTransform="translate(40 40) rotate(90) scale(29 29)">
-            <stop offset="0.6" stop-color="white" />
-            <stop offset="1" stop-color="white" stop-opacity="0.7" />
-          </radialGradient>
-          <linearGradient
-            id="f5"
-            x1="40"
-            y1="19.0488"
-            x2="40"
-            y2="60.3822"
-            gradientUnits="userSpaceOnUse">
-            <stop stop-color="white" />
-            <stop offset="1" stop-color="#F2F2F2" />
-          </linearGradient>
-          <linearGradient
-            id="f6"
-            x1="40"
-            y1="21.7148"
-            x2="40"
-            y2="57.7148"
-            gradientUnits="userSpaceOnUse">
-            <stop stop-color="#EBEBEB" />
-            <stop offset="1" stop-color="white" />
-          </linearGradient>
-        </defs>
-      </svg>`
-  }
-
 }
 
 declare global {

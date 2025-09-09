@@ -45,12 +45,9 @@ export class LiveMusicHelper extends EventTarget {
   }
 
   private async connect(): Promise<LiveMusicSession> {
-    // FIX: 'initialBpm' is not a valid parameter. Replaced with 'inputParameters'.
+    // FIX: Removed `initialBpm` as it's not a valid property in `LiveMusicConnectParameters`. BPM is now set via `setWeightedPrompts`.
     this.sessionPromise = this.ai.live.music.connect({
       model: this.model,
-      inputParameters: {
-        bpm: this.bpm,
-      },
       callbacks: {
         onmessage: async (e: LiveMusicServerMessage) => {
           if (e.setupComplete) {
@@ -131,8 +128,10 @@ export class LiveMusicHelper extends EventTarget {
     if (!this.session) return;
 
     try {
+      // FIX: The `bpm` property must be passed at the top level, not within a `config` object.
       await this.session.setWeightedPrompts({
         weightedPrompts: this.activePrompts,
+        bpm: this.bpm,
       });
     } catch (e: any) {
       this.dispatchEvent(new CustomEvent('error', { detail: e.message }));
@@ -143,12 +142,9 @@ export class LiveMusicHelper extends EventTarget {
   public async setBpm(bpm: number) {
     this.bpm = bpm;
     if (this.session) {
-      try {
-        // FIX: 'setBpm' does not exist on LiveMusicSession. Replaced with 'setInputParameters'.
-        await this.session.setInputParameters({ bpm });
-      } catch (e: any) {
-        this.dispatchEvent(new CustomEvent('error', { detail: e.message }));
-      }
+      // FIX: `session.setBpm` does not exist. Instead, we call `setWeightedPrompts`
+      // which is throttled and will send the new BPM along with the prompts.
+      await this.setWeightedPrompts(this.prompts);
     }
   }
 

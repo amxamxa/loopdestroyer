@@ -48,26 +48,49 @@ export class PromptController extends LitElement {
         visibility: visible;
       }
     }
+    #solo {
+      font-family: monospace;
+      font-weight: bold;
+      font-size: 1.5vmin;
+      background-color: #ffd700;
+      color: #000;
+      border: 1px solid #000;
+      border-radius: 50%;
+      width: 2.5vmin;
+      height: 2.5vmin;
+      cursor: pointer;
+      margin-top: 0.75vmin;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+    #solo:hover {
+      background-color: #ffea00;
+    }
+    #solo.active {
+      background-color: #ffea00;
+      box-shadow: 0 0 10px #ffd700;
+    }
     #text {
       font-weight: 500;
       font-size: 1.8vmin;
-      max-width: 17vmin;
-      min-width: 2vmin;
+      max-width: 12vmin;
+      min-width: 12vmin;
+      height: 4.5vmin;
       padding: 0.1em 0.3em;
       margin-top: 0.5vmin;
       flex-shrink: 0;
       border-radius: 0.25vmin;
       text-align: center;
-      white-space: pre;
       overflow: hidden;
       border: none;
       outline: none;
       -webkit-font-smoothing: antialiased;
-      background: #000;
-      color: #fff;
-      &:not(:focus) {
-        text-overflow: ellipsis;
-      }
+      background: #1A111F;
+      color: rgba(246, 0, 255, 0.6);
+      word-break: break-word;
     }
     :host([filtered]) {
       weight-knob { 
@@ -93,6 +116,7 @@ export class PromptController extends LitElement {
   @property({ type: Number }) weight = 0;
   @property({ type: String }) color = '';
   @property({ type: Boolean, reflect: true }) filtered = false;
+  @property({ type: Boolean }) isSoloed = false;
 
   @property({ type: Number }) cc = 0;
   @property({ type: Number }) channel = 0; // Not currently used
@@ -210,6 +234,14 @@ export class PromptController extends LitElement {
     this.learnMode = !this.learnMode;
   }
 
+  private toggleSolo() {
+    this.dispatchEvent(new CustomEvent('solo-toggled', {
+        detail: { promptId: this.promptId },
+        bubbles: true,
+        composed: true
+    }));
+  }
+
   override render() {
     const classes = classMap({
       'prompt': true,
@@ -223,6 +255,7 @@ export class PromptController extends LitElement {
         color=${this.filtered ? '#888' : this.color}
         audioLevel=${this.filtered ? 0 : this.audioLevel}
         @input=${this.updateWeight}></weight-knob>
+      <button id="solo" class=${this.isSoloed ? 'active' : ''} @click=${this.toggleSolo}>S</button>
       <span
         id="text"
         spellcheck="false"
@@ -240,4 +273,4 @@ declare global {
   interface HTMLElementTagNameMap {
     'prompt-controller': PromptController;
   }
-} 
+}

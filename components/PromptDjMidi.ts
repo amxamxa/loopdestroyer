@@ -25,6 +25,7 @@ export class PromptDjMidi extends LitElement {
       align-items: center;
       box-sizing: border-box;
       position: relative;
+      gap: 1vmin;
     }
     #background {
       will-change: background-image;
@@ -35,19 +36,19 @@ export class PromptDjMidi extends LitElement {
       background: #111;
     }
     #grid {
-      width: 80vmin;
-      height: 80vmin;
+      width: 56vmin;
+      height: 85vmin;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 2.5vmin;
-      margin-top: 8vmin;
+      grid-template-rows: repeat(6, 1fr);
+      gap: 1.5vmin;
     }
     prompt-controller {
       width: 100%;
     }
     play-pause-button {
       position: relative;
-      width: 15vmin;
+      width: 12vmin;
     }
     #buttons {
       position: absolute;
@@ -152,6 +153,9 @@ export class PromptDjMidi extends LitElement {
   @state() private presets: Record<string, string> = {};
   @state() private selectedPresetName = '';
   @state() private bpm = 144;
+  @state() private soloedPromptId: string | null = null;
+  @state() private weightsBeforeSolo: Map<string, number> | null = null;
+
 
   @property({ type: Object })
   private filteredPrompts = new Set<string>();
@@ -166,6 +170,17 @@ export class PromptDjMidi extends LitElement {
   }
 
   private handlePromptChanged(e: CustomEvent<Prompt>) {
+    // If a prompt value is changed while in solo mode, exit solo mode.
+    if (this.soloedPromptId) {
+        if (this.weightsBeforeSolo) {
+             for (const [id, prompt] of this.prompts.entries()) {
+                prompt.weight = this.weightsBeforeSolo.get(id) ?? 0;
+            }
+        }
+        this.soloedPromptId = null;
+        this.weightsBeforeSolo = null;
+    }
+
     const { promptId, text, weight, cc } = e.detail;
     const prompt = this.prompts.get(promptId);
 
@@ -207,7 +222,7 @@ export class PromptDjMidi extends LitElement {
 
         const stop = p.weight / 2;
         const x = (i % 4) / 3;
-        const y = Math.floor(i / 4) / 3;
+        const y = Math.floor(i / 4) / (Math.ceil(this.prompts.size / 4) - 1);
         const s = `radial-gradient(circle at ${x * 100}% ${y * 100}%, ${p.color}${alpha} 0px, ${p.color}00 ${stop * 100}%)`;
 
         bg.push(s);
@@ -322,6 +337,40 @@ export class PromptDjMidi extends LitElement {
     this.dispatchEvent(new CustomEvent('bpm-changed', { detail: this.bpm }));
   }
 
+  private handleSoloToggled(e: CustomEvent<{ promptId: string }>) {
+    const { promptId } = e.detail;
+
+    if (this.soloedPromptId === promptId) {
+        // Un-soloing
+        this.soloedPromptId = null;
+        if (this.weightsBeforeSolo) {
+            for (const [id, prompt] of this.prompts.entries()) {
+                prompt.weight = this.weightsBeforeSolo.get(id) ?? 0;
+            }
+            this.weightsBeforeSolo = null;
+        }
+    } else {
+        // Soloing a new prompt (or for the first time)
+        if (!this.soloedPromptId) {
+            // entering solo mode from normal state, so store current weights
+            this.weightsBeforeSolo = new Map([...this.prompts.values()].map(p => [p.promptId, p.weight]));
+        }
+        
+        this.soloedPromptId = promptId;
+
+        for (const prompt of this.prompts.values()) {
+            prompt.weight = prompt.promptId === promptId ? 2 : 0;
+        }
+    }
+    
+    // Update prompts map and dispatch event
+    this.prompts = new Map(this.prompts);
+    this.requestUpdate();
+    this.dispatchEvent(
+        new CustomEvent('prompts-changed', { detail: new Map(this.prompts) }),
+    );
+  }
+
   override render() {
     const bg = styleMap({
       backgroundImage: this.makeBackground(),
@@ -377,6 +426,7 @@ export class PromptDjMidi extends LitElement {
       return html`<prompt-controller
         promptId=${prompt.promptId}
         ?filtered=${this.filteredPrompts.has(prompt.text)}
+        ?isSoloed=${this.soloedPromptId === prompt.promptId}
         cc=${prompt.cc}
         text=${prompt.text}
         weight=${prompt.weight}
@@ -384,7 +434,8 @@ export class PromptDjMidi extends LitElement {
         .midiDispatcher=${this.midiDispatcher}
         .showCC=${this.showMidi}
         audioLevel=${this.audioLevel}
-        @prompt-changed=${this.handlePromptChanged}>
+        @prompt-changed=${this.handlePromptChanged}
+        @solo-toggled=${this.handleSoloToggled}>
       </prompt-controller>`;
     });
   }
